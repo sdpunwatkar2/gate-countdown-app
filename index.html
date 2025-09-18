@@ -1,0 +1,210 @@
+import React, { useEffect, useState } from "react";
+
+// GATE Countdown — Single-file React component (TailwindCSS)
+// Usage: place this component into a Create React App / Vite project with Tailwind configured.
+// Preset target: Feb 16, 2026 09:00 IST (you can change TARGET_DATE below or via UI)
+
+const TARGET_DATE = new Date("2026-02-16T09:00:00+05:30"); // change as needed
+
+function pad(n) {
+  return String(n).padStart(2, "0");
+}
+
+function formatTimeLeft(ms) {
+  if (ms <= 0) return { days: "00", hours: "00", minutes: "00", seconds: "00" };
+  const sec = Math.floor(ms / 1000);
+  const days = Math.floor(sec / (3600 * 24));
+  const hours = Math.floor((sec % (3600 * 24)) / 3600);
+  const minutes = Math.floor((sec % 3600) / 60);
+  const seconds = sec % 60;
+  return { days: String(days), hours: pad(hours), minutes: pad(minutes), seconds: pad(seconds) };
+}
+
+export default function GateCountdownApp() {
+  const [now, setNow] = useState(new Date());
+  const [target, setTarget] = useState(() => {
+    const stored = localStorage.getItem("gate:target");
+    return stored ? new Date(stored) : TARGET_DATE;
+  });
+  const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("gate:target", target.toString());
+  }, [target]);
+
+  const diff = target - now;
+  const time = formatTimeLeft(diff);
+
+  const totalStart = new Date(target.getFullYear() - 1, target.getMonth(), target.getDate());
+  const totalPeriod = Math.max(target - totalStart, 1);
+  const elapsed = Math.max(now - totalStart, 0);
+  const percent = Math.min(100, Math.round((elapsed / totalPeriod) * 100));
+
+  function handleQuickSet(daysFromNow) {
+    const d = new Date();
+    d.setDate(d.getDate() + daysFromNow);
+    d.setHours(9, 0, 0, 0);
+    setTarget(d);
+  }
+
+  function handleCustomDateChange(e) {
+    const val = e.target.value; // yyyy-mm-dd
+    if (!val) return;
+    // set time to 09:00 local
+    const [y, m, d] = val.split("-").map(Number);
+    const dt = new Date(y, m - 1, d, 9, 0, 0);
+    setTarget(dt);
+  }
+
+  function downloadWidgetEmbed() {
+    const embedCode = `<div id=\"gate-countdown-widget\"></div>\n<script>\n(function(){\n  function pad(n){return String(n).padStart(2,'0')}\n  var target=new Date('${target.toISOString()}');\n  function tick(){\n    var now=new Date();var diff=target-now; if(diff<0){document.getElementById('gate-countdown-widget').innerText='Exam day — all the best!';return}
+    var sec=Math.floor(diff/1000);var days=Math.floor(sec/(3600*24));var hours=Math.floor((sec%(3600*24))/3600);var minutes=Math.floor((sec%3600)/60);var seconds=sec%60;document.getElementById('gate-countdown-widget').innerHTML=`<strong>${days}</strong> days <strong>${pad(hours)}</strong>:<strong>${pad(minutes)}</strong>:<strong>${pad(seconds)}</strong>`;
+  }
+  tick();setInterval(tick,1000);
+})();\n</script>`;
+    const blob = new Blob([embedCode], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "gate-countdown-embed.html";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-indigo-900 to-rose-900 text-slate-100 antialiased">
+      <header className="max-w-5xl mx-auto p-6 flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-white/10 rounded-lg flex items-center justify-center text-2xl font-bold">G</div>
+          <div>
+            <h1 className="text-xl font-semibold">GATE Countdown — 2026</h1>
+            <p className="text-sm text-slate-300">Personalized timer, study tracker & resources</p>
+          </div>
+        </div>
+        <nav className="flex gap-3 items-center">
+          <button onClick={() => window.scrollTo({ top: 9999, behavior: 'smooth' })} className="px-4 py-2 bg-white/10 rounded-md text-sm">Resources</button>
+          <a href="#" onClick={(e)=>{e.preventDefault(); downloadWidgetEmbed()}} className="px-4 py-2 bg-amber-400 text-slate-900 rounded-md text-sm font-medium">Download Widget</a>
+        </nav>
+      </header>
+
+      <main className="max-w-5xl mx-auto px-6 py-8 grid gap-8">
+        <section className="grid md:grid-cols-2 gap-6 items-center">
+          <div>
+            <h2 className="text-4xl font-extrabold leading-tight">Countdown to your GATE exam</h2>
+            <p className="text-slate-300 mt-2">Stay focused — track remaining time, progress, and access curated resources and a 4-month study plan.</p>
+
+            <div className="mt-6 bg-white/5 p-6 rounded-2xl shadow-lg w-full max-w-md">
+              <div className="flex items-baseline gap-4">
+                <div className="text-5xl font-extrabold">{time.days}</div>
+                <div className="grid grid-cols-3 gap-2 text-center text-slate-200/90">
+                  <div>
+                    <div className="text-2xl font-bold">{time.hours}</div>
+                    <div className="text-xs text-slate-400">Hours</div>
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold">{time.minutes}</div>
+                    <div className="text-xs text-slate-400">Minutes</div>
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold">{time.seconds}</div>
+                    <div className="text-xs text-slate-400">Seconds</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4">
+                <div className="w-full bg-white/10 rounded-lg h-3 overflow-hidden">
+                  <div className="h-3 rounded-lg" style={{ width: `${percent}%`, background: 'linear-gradient(90deg,#fde68a,#fb7185)' }} />
+                </div>
+                <div className="flex justify-between text-xs text-slate-400 mt-1">
+                  <div>Progress</div>
+                  <div>{percent}%</div>
+                </div>
+              </div>
+
+              <div className="mt-4 flex flex-wrap gap-2">
+                <button onClick={() => handleQuickSet(7)} className="px-3 py-1 bg-white/6 rounded">Set +7d</button>
+                <button onClick={() => handleQuickSet(30)} className="px-3 py-1 bg-white/6 rounded">Set +30d</button>
+                <button onClick={() => handleQuickSet(90)} className="px-3 py-1 bg-white/6 rounded">Set +90d</button>
+                <label className="flex items-center gap-2 ml-auto text-sm text-slate-300">
+                  Custom date:
+                  <input type="date" onChange={handleCustomDateChange} className="bg-transparent border border-white/10 rounded px-2 py-1 text-sm" />
+                </label>
+              </div>
+
+              <div className="mt-4 text-xs text-slate-400">
+                Target: <strong>{target.toLocaleString()}</strong>
+              </div>
+            </div>
+
+            <div className="mt-6 flex gap-3">
+              <button onClick={() => navigator.clipboard?.writeText(window.location.href)} className="px-4 py-2 bg-white/10 rounded">Share</button>
+              <button onClick={() => { setMessage('Motivation: "Consistent effort beats occasional genius."'); window.scrollTo({ top: 400, behavior: 'smooth' }) }} className="px-4 py-2 bg-rose-500 text-white rounded">Motivate me</button>
+            </div>
+
+            {message && <div className="mt-4 text-slate-200/90 p-3 bg-white/5 rounded">{message}</div>}
+
+          </div>
+
+          <div>
+            <div className="rounded-2xl bg-white/5 p-6 shadow-lg h-full">
+              <h3 className="text-xl font-semibold">4-Month Study Plan (Quick)</h3>
+              <ol className="mt-3 list-decimal ml-5 text-sm text-slate-200/90 space-y-2">
+                <li><strong>Months 1–2:</strong> Strengthen fundamentals — Mathematics, Networks, Digital, Signals (daily 4–6 hrs).</li>
+                <li><strong>Month 3:</strong> Topic-wise practice + previous year papers (timed).</li>
+                <li><strong>Month 4:</strong> Mock tests, revision maps, weak-topic patching.</li>
+              </ol>
+
+              <h4 className="mt-6 font-medium">Suggested Resources</h4>
+              <ul className="mt-2 text-sm space-y-2">
+                <li><a className="underline" href="#">GATE official syllabus</a></li>
+                <li><a className="underline" href="#">Top video playlists</a></li>
+                <li><a className="underline" href="#">Previous year papers (download)</a></li>
+              </ul>
+
+              <div className="mt-6">
+                <label className="block text-sm text-slate-300">Subscribe for reminders (mock)</label>
+                <div className="mt-2 flex gap-2">
+                  <input placeholder="your-email@example.com" className="flex-1 bg-transparent border border-white/10 px-3 py-2 rounded text-sm" />
+                  <button className="px-4 py-2 bg-emerald-400 text-slate-900 rounded">Subscribe</button>
+                </div>
+                <div className="mt-2 text-xs text-slate-400">(This demo doesn't send real emails.)</div>
+              </div>
+
+            </div>
+          </div>
+        </section>
+
+        <section id="resources" className="bg-white/3 rounded-2xl p-6 shadow-inner">
+          <h3 className="text-2xl font-semibold">Curated Resources</h3>
+          <div className="mt-4 grid md:grid-cols-3 gap-4">
+            <Card title="Official Syllabus" desc="Download PDF & mark topics" link="#"/>
+            <Card title="Past Papers" desc="Year-wise question banks" link="#"/>
+            <Card title="Mock Tests" desc="Simulated, timed tests" link="#"/>
+          </div>
+        </section>
+
+        <section className="text-center text-sm text-slate-300">
+          <p>Made with ❤️ for focused prep. Customize the target date, download an embeddable widget, and share with friends.</p>
+        </section>
+
+      </main>
+
+      <footer className="mt-12 py-6 text-center text-slate-300 text-xs">© {new Date().getFullYear()} GATE Countdown — Demo</footer>
+    </div>
+  );
+}
+
+function Card({ title, desc, link }) {
+  return (
+    <a href={link} className="block p-4 bg-white/5 rounded-lg hover:scale-[1.01] transition-transform">
+      <div className="font-semibold">{title}</div>
+      <div className="text-xs text-slate-300 mt-1">{desc}</div>
+    </a>
+  );
+}
