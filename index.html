@@ -23,8 +23,12 @@ function formatTimeLeft(ms) {
 export default function GateCountdownApp() {
   const [now, setNow] = useState(new Date());
   const [target, setTarget] = useState(() => {
-    const stored = localStorage.getItem("gate:target");
-    return stored ? new Date(stored) : TARGET_DATE;
+    try {
+      const stored = localStorage.getItem("gate:target");
+      return stored ? new Date(stored) : TARGET_DATE;
+    } catch (e) {
+      return TARGET_DATE;
+    }
   });
   const [message, setMessage] = useState("");
 
@@ -34,7 +38,12 @@ export default function GateCountdownApp() {
   }, []);
 
   useEffect(() => {
-    localStorage.setItem("gate:target", target.toString());
+    try {
+      // store an ISO string so it's reliably parseable later
+      localStorage.setItem("gate:target", target.toISOString());
+    } catch (e) {
+      // ignore (e.g. SSR or private mode)
+    }
   }, [target]);
 
   const diff = target - now;
@@ -62,11 +71,11 @@ export default function GateCountdownApp() {
   }
 
   function downloadWidgetEmbed() {
-    const embedCode = `<div id=\"gate-countdown-widget\"></div>\n<script>\n(function(){\n  function pad(n){return String(n).padStart(2,'0')}\n  var target=new Date('${target.toISOString()}');\n  function tick(){\n    var now=new Date();var diff=target-now; if(diff<0){document.getElementById('gate-countdown-widget').innerText='Exam day — all the best!';return}
-    var sec=Math.floor(diff/1000);var days=Math.floor(sec/(3600*24));var hours=Math.floor((sec%(3600*24))/3600);var minutes=Math.floor((sec%3600)/60);var seconds=sec%60;document.getElementById('gate-countdown-widget').innerHTML=`<strong>${days}</strong> days <strong>${pad(hours)}</strong>:<strong>${pad(minutes)}</strong>:<strong>${pad(seconds)}</strong>`;
-  }
-  tick();setInterval(tick,1000);
-})();\n</script>`;
+    // NOTE: avoid nested template-backticks inside the outer template literal to prevent syntax errors
+    const embedCode = `<div id="gate-countdown-widget"></div>\n<script>\n(function(){\n  function pad(n){return String(n).padStart(2,'0');}\n  var target=new Date('${target.toISOString()}');\n  function tick(){\n    var now=new Date();\n    var diff=target-now;\n    if(diff<0){\n      document.getElementById('gate-countdown-widget').innerText='Exam day — all the best!';\n      return;\n    }\n    var sec=Math.floor(diff/1000);\n    var days=Math.floor(sec/(3600*24));\n    var hours=Math.floor((sec%(3600*24))/3600);\n    var minutes=Math.floor((sec%3600)/60);\n    var seconds=sec%60;\n    // build innerHTML using string concatenation (no backticks) to avoid conflicts
+    document.getElementById('gate-countdown-widget').innerHTML = '<strong>' + days + '</strong> days <strong>' + pad(hours) + '</strong>:<strong>' + pad(minutes) + '</strong>:<strong>' + pad(seconds) + '</strong>';
+  }\n  tick();\n  setInterval(tick,1000);\n})();\n</script>`;
+
     const blob = new Blob([embedCode], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -88,7 +97,7 @@ export default function GateCountdownApp() {
         </div>
         <nav className="flex gap-3 items-center">
           <button onClick={() => window.scrollTo({ top: 9999, behavior: 'smooth' })} className="px-4 py-2 bg-white/10 rounded-md text-sm">Resources</button>
-          <a href="#" onClick={(e)=>{e.preventDefault(); downloadWidgetEmbed()}} className="px-4 py-2 bg-amber-400 text-slate-900 rounded-md text-sm font-medium">Download Widget</a>
+          <a href="#" onClick={(e)=>{e.preventDefault(); downloadWidgetEmbed();}} className="px-4 py-2 bg-amber-400 text-slate-900 rounded-md text-sm font-medium">Download Widget</a>
         </nav>
       </header>
 
@@ -144,7 +153,7 @@ export default function GateCountdownApp() {
 
             <div className="mt-6 flex gap-3">
               <button onClick={() => navigator.clipboard?.writeText(window.location.href)} className="px-4 py-2 bg-white/10 rounded">Share</button>
-              <button onClick={() => { setMessage('Motivation: "Consistent effort beats occasional genius."'); window.scrollTo({ top: 400, behavior: 'smooth' }) }} className="px-4 py-2 bg-rose-500 text-white rounded">Motivate me</button>
+              <button onClick={() => { setMessage('Motivation: "Consistent effort beats occasional genius."'); window.scrollTo({ top: 400, behavior: 'smooth' }); }} className="px-4 py-2 bg-rose-500 text-white rounded">Motivate me</button>
             </div>
 
             {message && <div className="mt-4 text-slate-200/90 p-3 bg-white/5 rounded">{message}</div>}
